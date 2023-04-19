@@ -7,7 +7,7 @@ from sys import platform
 
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.chrome.options import Options as ChromeOptions, Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from selenium.webdriver.remote.webdriver import WebDriver
@@ -69,22 +69,7 @@ def scrape_text_with_selenium(url: str) -> tuple[WebDriver, str]:
         "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.49 Safari/537.36"
     )
 
-    if CFG.selenium_web_browser == "firefox":
-        driver = webdriver.Firefox(
-            executable_path=GeckoDriverManager().install(), options=options
-        )
-    elif CFG.selenium_web_browser == "safari":
-        # Requires a bit more setup on the users end
-        # See https://developer.apple.com/documentation/webkit/testing_with_webdriver_in_safari
-        driver = webdriver.Safari(options=options)
-    else:
-        if platform == "linux" or platform == "linux2":
-            options.add_argument("--disable-dev-shm-usage")
-            options.add_argument("--remote-debugging-port=9222")
-        options.add_argument("--no-sandbox")
-        driver = webdriver.Chrome(
-            executable_path=ChromeDriverManager().install(), options=options
-        )
+    driver = get_headless_chrome_driver()
     driver.get(url)
 
     WebDriverWait(driver, 10).until(
@@ -104,6 +89,17 @@ def scrape_text_with_selenium(url: str) -> tuple[WebDriver, str]:
     text = "\n".join(chunk for chunk in chunks if chunk)
     return driver, text
 
+def get_headless_chrome_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("start-maximized")
+    chrome_options.add_argument("disable-infobars")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+
+    return webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
 
 def scrape_links_with_selenium(driver: WebDriver, url: str) -> list[str]:
     """Scrape links from a website using selenium
